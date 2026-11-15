@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Salary &amp; OT Calculator</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: #f1f5f9; color: #0f172a; }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; }
+    .tab-active { color: #2563eb; }
+    .tab-active svg { stroke: #2563eb; }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 12px); }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-100 flex justify-center">
+  <div class="w-full max-w-md min-h-screen bg-slate-50 shadow-xl flex flex-col relative pb-20">
+    <!-- Top App Header -->
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+      <div>
+        <h1 class="text-base font-bold text-slate-900 tracking-tight">Salary &amp; OT Tracker</h1>
+        <p class="text-[11px] text-slate-500 font-medium">VIPL &bull; Career Income &amp; Overtime</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-audit-badge" type="button" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 active:scale-95 transition">
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+          4 Checks
+        </button>
+        <button id="btn-export-csv" type="button" title="Export CSV" class="p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V3"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 hidden px-4 py-2 rounded-full bg-slate-900 text-white text-xs font-medium shadow-lg transition-opacity"></div>
+
+    <!-- Main Content Views -->
+    <main class="flex-1 px-4 pt-4 space-y-4 overflow-y-auto">
+
+      <!-- VIEW 1: SALARY CALCULATOR -->
+      <section id="view-salary" class="space-y-4">
+        <!-- Hero Take-Home Card -->
+        <div class="rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white p-4 shadow-md">
+          <div class="flex items-center justify-between text-xs text-blue-100 mb-1">
+            <span id="sal-card-label">Estimated Take-Home Salary</span>
+            <span id="sal-pf-badge" class="px-2 py-0.5 rounded-full bg-white/15 font-semibold">PF Active</span>
+          </div>
+          <div class="text-3xl font-extrabold tracking-tight" id="sal-out-takehome">₹37,883</div>
+          <div class="mt-3 pt-3 border-t border-white/15 grid grid-cols-3 gap-2 text-xs">
+            <div>
+              <div class="text-blue-200 text-[10px] uppercase font-semibold">Gross</div>
+              <div class="font-bold" id="sal-out-gross">₹47,500</div>
+            </div>
+            <div>
+              <div class="text-blue-200 text-[10px] uppercase font-semibold">Deductions</div>
+              <div class="font-bold text-rose-200" id="sal-out-deduct">-₹9,617</div>
+            </div>
+            <div>
+              <div class="text-blue-200 text-[10px] uppercase font-semibold">+ Est. OT</div>
+              <div class="font-bold text-emerald-200" id="sal-out-with-ot">₹41,518</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Salary Inputs Card -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-4 shadow-sm">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-slate-800">Salary Inputs</h2>
+            <button id="btn-reset-sal" type="button" class="text-xs font-semibold text-blue-600">Reset</button>
+          </div>
+
+          <!-- Month & Year Identification -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="sal-month-sel" class="block text-[11px] font-semibold text-slate-500 mb-1">Month</label>
+              <select id="sal-month-sel" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="January">January</option>
+                <option value="February">February</option>
+                <option value="March">March</option>
+                <option value="April">April</option>
+                <option value="May">May</option>
+                <option value="June">June</option>
+                <option value="July">July</option>
+                <option value="August">August</option>
+                <option value="September">September</option>
+                <option value="October">October</option>
+                <option value="November" selected>November</option>
+                <option value="December">December</option>
+              </select>
+            </div>
+            <div>
+              <label for="sal-year-sel" class="block text-[11px] font-semibold text-slate-500 mb-1">Year</label>
+              <select id="sal-year-sel" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+                <option value="2026" selected>2026</option>
+                <option value="2027">2027</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Salary Date & Auto Days Count -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="sal-date" class="block text-[11px] font-semibold text-slate-500 mb-1">Salary Date</label>
+              <input id="sal-date" type="date" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-500 mb-1">Days in Month (Auto)</label>
+              <div id="sal-days-display" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold text-blue-700">30 days</div>
+            </div>
+          </div>
+
+          <!-- Base Salary & Days Present (Manual Entry) -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="sal-gross" class="block text-[11px] font-semibold text-slate-500 mb-1">Monthly Net/Base Salary (₹)</label>
+              <input id="sal-gross" type="number" min="0" step="100" value="47500" placeholder="Enter salary" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label for="sal-present" class="block text-[11px] font-semibold text-slate-500 mb-1">Days Present (Manual)</label>
+              <input id="sal-present" type="number" min="0" max="31" step="0.5" value="25" placeholder="Enter days" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-base font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+
+          <!-- Attendance Slider -->
+          <div>
+            <div class="flex justify-between text-[11px] font-medium text-slate-500 mb-1">
+              <span>Attendance: <strong id="sal-att-pct" class="text-slate-800">83.3%</strong></span>
+              <span>Leave Taken: <strong id="sal-leave-days" class="text-rose-600">5 days</strong></span>
+            </div>
+            <input id="sal-present-slider" type="range" min="0" max="30" step="0.5" value="25" class="w-full accent-blue-600 h-2 bg-slate-200 rounded-lg cursor-pointer" />
+          </div>
+
+          <!-- Tax, PF Toggle & Notes -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="sal-tax" class="block text-[11px] font-semibold text-slate-500 mb-1">Prof. Tax (₹)</label>
+              <input id="sal-tax" type="number" min="0" step="50" value="200" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label for="sal-notes" class="block text-[11px] font-semibold text-slate-500 mb-1">CL / Notes</label>
+              <input id="sal-notes" type="text" placeholder="e.g. 2 CL" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+
+          <!-- PF Toggle -->
+          <div class="flex items-center justify-between pt-1">
+            <div>
+              <div class="text-xs font-bold text-slate-800">Provident Fund (PF)</div>
+              <div class="text-[11px] text-slate-500">Basic ₹15,000 pro-rated &bull; 12% Emp</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input id="sal-pf-toggle" type="checkbox" checked class="sr-only peer" />
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Breakdown Card -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-2.5 shadow-sm">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Deduction &amp; PF Breakdown</h3>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-600">Leave Deduction</span>
+            <span class="font-semibold text-rose-600" id="sal-brk-leave">₹7,917</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-600">Professional Tax</span>
+            <span class="font-semibold text-slate-800" id="sal-brk-tax">₹200</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-600">Pro-rated Basic</span>
+            <span class="font-semibold text-slate-800" id="sal-brk-basic">₹12,500</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-600">Employee PF (12%)</span>
+            <span class="font-semibold text-slate-800" id="sal-brk-pf-emp">₹1,500</span>
+          </div>
+          <div class="pt-2 border-t border-slate-100 grid grid-cols-3 gap-2 text-center bg-slate-50 rounded-xl p-2.5">
+            <div>
+              <div class="text-[10px] text-slate-500 font-medium">Employer (3.67%)</div>
+              <div class="text-xs font-bold text-slate-800" id="sal-brk-pf-empr">₹459</div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-500 font-medium">Govt EPS (8.33%)</div>
+              <div class="text-xs font-bold text-slate-800" id="sal-brk-pf-govt">₹1,041</div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-500 font-medium">Total PF (24%)</div>
+              <div class="text-xs font-bold text-blue-700" id="sal-brk-pf-tot">₹3,000</div>
+            </div>
+          </div>
+          <button id="btn-save-month" type="button" class="w-full mt-2 py-3 rounded-xl bg-slate-900 text-white text-sm font-bold active:scale-[0.99] transition">
+            Save / Update Month in Log
+          </button>
+        </div>
+      </section>
+
+      <!-- VIEW 2: OT CALCULATOR -->
+      <section id="view-ot" class="hidden space-y-4">
+        <div class="rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-700 to-cyan-800 text-white p-4 shadow-md">
+          <div class="flex items-center justify-between text-xs text-emerald-100 mb-1">
+            <span>Total Overtime &amp; Allowance</span>
+            <span class="px-2 py-0.5 rounded-full bg-white/15 font-semibold" id="ot-divisor-badge">6h/day</span>
+          </div>
+          <div class="text-3xl font-extrabold tracking-tight" id="ot-out-total">₹3,635</div>
+          <div class="mt-3 pt-3 border-t border-white/15 grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <div class="text-emerald-200 text-[10px] uppercase font-semibold">Salary / Day</div>
+              <div class="font-bold" id="ot-out-perday">₹1,583</div>
+            </div>
+            <div>
+              <div class="text-emerald-200 text-[10px] uppercase font-semibold">Salary / Hour</div>
+              <div class="font-bold" id="ot-out-perhr">₹264</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-4 shadow-sm">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-bold text-slate-800">OT &amp; Site Inputs</h2>
+            <div class="flex items-center gap-2">
+              <span id="ot-sal-badge" class="px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 text-[11px] font-bold">Sal: ₹47,500 (30d)</span>
+              <button id="btn-sync-sal" type="button" class="text-xs font-semibold text-teal-600">Sync Salary</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="ot-month-sel" class="block text-[11px] font-semibold text-slate-500 mb-1">Month</label>
+              <select id="ot-month-sel" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <option value="January">January</option>
+                <option value="February">February</option>
+                <option value="March">March</option>
+                <option value="April">April</option>
+                <option value="May">May</option>
+                <option value="June">June</option>
+                <option value="July">July</option>
+                <option value="August">August</option>
+                <option value="September">September</option>
+                <option value="October">October</option>
+                <option value="November" selected>November</option>
+                <option value="December">December</option>
+              </select>
+            </div>
+            <div>
+              <label for="ot-year-sel" class="block text-[11px] font-semibold text-slate-500 mb-1">Year</label>
+              <select id="ot-year-sel" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+                <option value="2026" selected>2026</option>
+                <option value="2027">2027</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="ot-site-count" class="block text-[11px] font-semibold text-slate-500 mb-1">Site Visits (Count)</label>
+              <div class="flex items-center border border-slate-200 rounded-xl overflow-hidden">
+                <button id="btn-site-minus" type="button" class="px-3 py-2 bg-slate-50 text-slate-700 font-bold">&minus;</button>
+                <input id="ot-site-count" type="number" min="0" step="1" value="3" class="w-full text-center text-sm font-bold text-slate-900 focus:outline-none" />
+                <button id="btn-site-plus" type="button" class="px-3 py-2 bg-slate-50 text-slate-700 font-bold">+</button>
+              </div>
+            </div>
+            <div>
+              <label for="ot-allowance" class="block text-[11px] font-semibold text-slate-500 mb-1">Site Allowance (₹)</label>
+              <input id="ot-allowance" type="number" min="0" step="50" value="200" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="ot-site-days" class="block text-[11px] font-semibold text-slate-500 mb-1">OT Site (Days)</label>
+              <div class="flex items-center border border-slate-200 rounded-xl overflow-hidden">
+                <button id="btn-otsite-minus" type="button" class="px-3 py-2 bg-slate-50 text-slate-700 font-bold">&minus;</button>
+                <input id="ot-site-days" type="number" min="0" step="0.5" value="0.5" class="w-full text-center text-sm font-bold text-slate-900 focus:outline-none" />
+                <button id="btn-otsite-plus" type="button" class="px-3 py-2 bg-slate-50 text-slate-700 font-bold">+</button>
+              </div>
+            </div>
+            <div>
+              <label for="ot-lab-hours" class="block text-[11px] font-semibold text-slate-500 mb-1">OT Lab (Hours)</label>
+              <div class="flex items-center border border-slate-200 rounded-xl overflow-hidden">
+                <button id="btn-otlab-minus" type="button" class="px-3 py-2 bg-slate-50 text-slate-700 font-bold">&minus;</button>
+                <input id="ot-lab-hours" type="number" min="0" step="0.5" value="8.5" class="w-full text-center text-sm font-bold text-slate-900 focus:outline-none" />
+                <button id="btn-otlab-plus" type="button" class="px-3 py-2 bg-slate-50 text-slate-700 font-bold">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="ot-hours-div" class="block text-[11px] font-semibold text-slate-500 mb-1">Hours/Day Divisor</label>
+              <input id="ot-hours-div" type="number" min="1" max="24" step="1" value="6" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            </div>
+            <div>
+              <label for="ot-notes" class="block text-[11px] font-semibold text-slate-500 mb-1">Notes / Missing Updates</label>
+              <input id="ot-notes" type="text" placeholder="e.g. half day shifted" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-2.5 shadow-sm">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">OT Calculation Breakdown</h3>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-600">Site Allowance (<span id="ot-lbl-sites">3</span> &times; ₹<span id="ot-lbl-allow">200</span>)</span>
+            <span class="font-semibold text-slate-900" id="ot-brk-siteallow">₹600</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-600">Site OT (<span id="ot-lbl-otsite">0.5</span> days)</span>
+            <span class="font-semibold text-slate-900" id="ot-brk-otsite">₹792</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-600">Lab OT (<span id="ot-lbl-otlab">8.5</span> hrs)</span>
+            <span class="font-semibold text-slate-900" id="ot-brk-otlab">₹2,243</span>
+          </div>
+          <div class="pt-2 border-t border-slate-100 flex justify-between text-sm font-bold">
+            <span class="text-slate-800">Total OT Pay</span>
+            <span class="text-teal-700" id="ot-brk-total">₹3,635</span>
+          </div>
+          <button id="btn-save-ot" type="button" class="w-full mt-2 py-3 rounded-xl bg-teal-700 text-white text-sm font-bold active:scale-[0.99] transition">
+            Save / Update OT Month
+          </button>
+        </div>
+      </section>
+
+      <!-- VIEW: OT HISTORY -->
+      <section id="view-ot-history" class="hidden space-y-3">
+        <div class="rounded-2xl bg-gradient-to-br from-teal-700 to-emerald-800 text-white p-4 shadow-md">
+          <div class="text-xs text-emerald-100 font-medium">Total OT &amp; Site Allowances (31 Months)</div>
+          <div class="text-2xl font-extrabold tracking-tight mt-0.5" id="oth-sum-total">₹0</div>
+          <div class="mt-2.5 pt-2.5 border-t border-white/15 grid grid-cols-3 gap-2 text-xs">
+            <div>
+              <div class="text-emerald-200 text-[10px] uppercase font-semibold">Site Visits</div>
+              <div class="font-bold" id="oth-sum-sites">0</div>
+            </div>
+            <div>
+              <div class="text-emerald-200 text-[10px] uppercase font-semibold">Site OT</div>
+              <div class="font-bold" id="oth-sum-otsite">0 d</div>
+            </div>
+            <div>
+              <div class="text-emerald-200 text-[10px] uppercase font-semibold">Lab OT</div>
+              <div class="font-bold" id="oth-sum-otlab">0 h</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input id="oth-search" type="text" placeholder="Search month or OT note..." class="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500" />
+          <select id="oth-year" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none">
+            <option value="all">All Years</option>
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+          </select>
+        </div>
+
+        <div id="oth-list" class="space-y-2.5 pb-4"></div>
+      </section>
+
+      <!-- VIEW 3: HISTORY & AUDIT -->
+      <section id="view-history" class="hidden space-y-3">
+        <!-- Sub-tabs -->
+        <div class="flex gap-2 bg-slate-200/70 p-1 rounded-xl">
+          <button type="button" data-hist="vipl" class="hist-tab flex-1 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-sm">VIPL (31)</button>
+          <button type="button" data-hist="flow" class="hist-tab flex-1 py-1.5 rounded-lg text-xs font-bold text-slate-600">Income Flow (64)</button>
+          <button type="button" data-hist="audit" class="hist-tab flex-1 py-1.5 rounded-lg text-xs font-bold text-slate-600">Sheet Audit</button>
+        </div>
+
+        <!-- Year Filter & Search (for VIPL & Flow) -->
+        <div id="hist-controls" class="flex items-center gap-2">
+          <input id="hist-search" type="text" placeholder="Search month or company..." class="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <select id="hist-year" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:outline-none">
+            <option value="all">All Years</option>
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+            <option value="2023">2023</option>
+            <option value="2022">2022</option>
+            <option value="2021">2021</option>
+          </select>
+        </div>
+
+        <div id="hist-list" class="space-y-2.5 pb-4"></div>
+      </section>
+
+      <!-- VIEW 4: INSIGHTS & CHARTS -->
+      <section id="view-insights" class="hidden space-y-4 pb-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm">
+            <div class="text-[11px] font-semibold text-slate-500">VIPL Net Salary</div>
+            <div class="text-lg font-extrabold text-slate-900 mt-0.5" id="ins-vipl-sal">₹0</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">31 months (May '24–Nov '26)</div>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm">
+            <div class="text-[11px] font-semibold text-slate-500">Total OT Earned</div>
+            <div class="text-lg font-extrabold text-emerald-600 mt-0.5" id="ins-total-ot">₹0</div>
+            <div class="text-[10px] text-slate-400 mt-0.5" id="ins-ot-avg">Avg ₹0 / mo</div>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm">
+            <div class="text-[11px] font-semibold text-slate-500">Total PF Corpus</div>
+            <div class="text-lg font-extrabold text-blue-600 mt-0.5" id="ins-total-pf">₹0</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Emp + Empr + Govt (24%)</div>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm">
+            <div class="text-[11px] font-semibold text-slate-500">Career Income</div>
+            <div class="text-lg font-extrabold text-indigo-700 mt-0.5" id="ins-career-total">₹0</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Euro &bull; Wavecal &bull; VIPL</div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <h3 class="text-xs font-bold text-slate-800 mb-3">VIPL Monthly Take-Home vs OT</h3>
+          <div class="relative h-64">
+            <canvas id="chart-vipl"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <h3 class="text-xs font-bold text-slate-800 mb-3">Career Income Flow (2021–2026)</h3>
+          <div class="relative h-64">
+            <canvas id="chart-career"></canvas>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 w-full max-w-md bg-white border-t border-slate-200 grid grid-cols-5 py-2 safe-bottom z-40">
+      <button type="button" data-view="salary" class="nav-btn tab-active flex flex-col items-center gap-0.5 text-[10px] font-semibold">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>Salary</span>
+      </button>
+      <button type="button" data-view="ot" class="nav-btn text-slate-500 flex flex-col items-center gap-0.5 text-[10px] font-semibold">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>OT Calc</span>
+      </button>
+      <button type="button" data-view="ot-history" class="nav-btn text-slate-500 flex flex-col items-center gap-0.5 text-[10px] font-semibold">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m5-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>OT History</span>
+      </button>
+      <button type="button" data-view="history" class="nav-btn text-slate-500 flex flex-col items-center gap-0.5 text-[10px] font-semibold">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        <span>History</span>
+      </button>
+      <button type="button" data-view="insights" class="nav-btn text-slate-500 flex flex-col items-center gap-0.5 text-[10px] font-semibold">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <span>Insights</span>
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    // Pre-loaded data from user's Google Sheet (salary1)
+    const INITIAL_VIPL = [
+      { id: "2024-05", month: "May 2024", date: "06-06-2024", gross: 35000, days: 31, present: 25, tax: 200, pfOn: false, notes: "", otSalary: 35000, sites: 0, otSite: 0, otLab: 1.5, siteAllow: 200, paidOt: 282, otNotes: "" },
+      { id: "2024-06", month: "June 2024", date: "08-07-2024", gross: 35000, days: 30, present: 30, tax: 200, pfOn: false, notes: "", otSalary: 35000, sites: 0, otSite: 0, otLab: 19.0, siteAllow: 200, paidOt: 3694, otNotes: "" },
+      { id: "2024-07", month: "July 2024", date: "08-08-2024", gross: 35000, days: 31, present: 31, tax: 200, pfOn: false, notes: "", otSalary: 35000, sites: 1, otSite: 0.5, otLab: 9.0, siteAllow: 200, paidOt: 2458, otNotes: "" },
+      { id: "2024-08", month: "August 2024", date: "09-09-2024", gross: 35000, days: 31, present: 31, tax: 200, pfOn: false, notes: "", otSalary: 35000, sites: 1, otSite: 0, otLab: 76.0, siteAllow: 200, paidOt: 14501, otNotes: "" },
+      { id: "2024-09", month: "September 2024", date: "08-10-2024", gross: 35000, days: 30, present: 28, tax: 200, pfOn: false, notes: "", otSalary: 35000, sites: 0, otSite: 0, otLab: 18.0, siteAllow: 200, paidOt: 3500, otNotes: "" },
+      { id: "2024-10", month: "October 2024", date: "08-11-2024", gross: 35000, days: 31, present: 29, tax: 200, pfOn: false, notes: "", otSalary: 35000, sites: 6, otSite: 0, otLab: 9.5, siteAllow: 200, paidOt: 2987, otNotes: "" },
+      { id: "2024-11", month: "November 2024", date: "09-12-2024", gross: 37500, days: 30, present: 27, tax: 200, pfOn: false, notes: "", otSalary: 35000, sites: 4, otSite: 0, otLab: 0, siteAllow: 200, paidOt: 800, otNotes: "OT sheet used 35000" },
+      { id: "2024-12", month: "December 2024", date: "09-01-2025", gross: 37500, days: 31, present: 28, tax: 200, pfOn: false, notes: "", otSalary: 37500, sites: 17, otSite: 0.5, otLab: 0, siteAllow: 200, paidOt: 4005, otNotes: "" },
+      { id: "2025-01", month: "January 2025", date: "07-02-2025", gross: 37500, days: 31, present: 30, tax: 200, pfOn: false, notes: "", otSalary: 37500, sites: 10, otSite: 0.5, otLab: 1.5, siteAllow: 200, paidOt: 2909, otNotes: "" },
+      { id: "2025-02", month: "February 2025", date: "10-03-2025", gross: 37500, days: 28, present: 28, tax: 200, pfOn: true, notes: "", otSalary: 37500, sites: 21, otSite: 3.5, otLab: 0, siteAllow: 200, paidOt: 8888, otNotes: "" },
+      { id: "2025-03", month: "March 2025", date: "08-04-2025", gross: 37500, days: 31, present: 29, tax: 200, pfOn: true, notes: "", otSalary: 37500, sites: 13, otSite: 3.5, otLab: 1.5, siteAllow: 200, paidOt: 7034, otNotes: "" },
+      { id: "2025-04", month: "April 2025", date: "09-05-2025", gross: 37500, days: 30, present: 30, tax: 200, pfOn: true, notes: "", otSalary: 37500, sites: 7, otSite: 0.5, otLab: 0, siteAllow: 200, paidOt: 2025, otNotes: "" },
+      { id: "2025-05", month: "May 2025", date: "09-06-2025", gross: 37500, days: 31, present: 28, tax: 200, pfOn: true, notes: "", otSalary: 37500, sites: 8, otSite: 1.0, otLab: 0, siteAllow: 200, paidOt: 2850, otNotes: "" },
+      { id: "2025-06", month: "June 2025", date: "09-07-2025", gross: 37500, days: 30, present: 15, tax: 200, pfOn: true, notes: "", otSalary: 37500, sites: 2, otSite: 0, otLab: 0, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2025-07", month: "July 2025", date: "07-08-2025", gross: 37500, days: 31, present: 19, tax: 200, pfOn: true, notes: "", otSalary: 37500, sites: 2, otSite: 0.5, otLab: 0, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2025-08", month: "August 2025", date: "08-09-2025", gross: 37500, days: 31, present: 28, tax: 200, pfOn: true, notes: "", otSalary: 37500, sites: 16, otSite: 7.0, otLab: 0, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2025-09", month: "September 2025", date: "09-10-2025", gross: 37500, days: 30, present: 26, tax: 200, pfOn: true, notes: "", otSalary: 37500, sites: 11, otSite: 5.0, otLab: 0, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2025-10", month: "October 2025", date: "09-11-2025", gross: 37500, days: 31, present: 27, tax: 200, pfOn: true, notes: "", otSalary: 37500, sites: 20, otSite: 4.5, otLab: 0, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2025-11", month: "November 2025", date: "09-12-2025", gross: 37500, days: 30, present: 26, tax: 200, pfOn: true, notes: "", otSalary: 37500, sites: 10, otSite: 3.0, otLab: 0, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2025-12", month: "December 2025", date: "09-01-2026", gross: 37500, days: 31, present: 29, tax: 200, pfOn: true, notes: "", otSalary: 37500, sites: 16, otSite: 5.0, otLab: 8.5, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2026-01", month: "January 2026", date: "09-02-2026", gross: 37500, days: 31, present: 31, tax: 200, pfOn: true, notes: "2 CL", otSalary: 37500, sites: 19, otSite: 5.0, otLab: 8.0, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2026-02", month: "February 2026", date: "09-03-2026", gross: 37500, days: 28, present: 28, tax: 300, pfOn: true, notes: "1CL", otSalary: 37500, sites: 13, otSite: 4.3, otLab: 0, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2026-03", month: "March 2026", date: "09-04-2026", gross: 37500, days: 31, present: 31, tax: 200, pfOn: true, notes: "1CL", otSalary: 37500, sites: 11, otSite: 0.5, otLab: 8.5, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2026-04", month: "April 2026", date: "08-05-2026", gross: 37500, days: 30, present: 24, tax: 200, pfOn: true, notes: "1CL", otSalary: 37500, sites: 5, otSite: 0.5, otLab: 18.5, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2026-05", month: "May 2026", date: "09-06-2026", gross: 47500, days: 31, present: 29, tax: 200, pfOn: true, notes: "3CL", otSalary: 47500, sites: 12, otSite: 3.5, otLab: 0, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2026-06", month: "June 2026", date: "09-07-2026", gross: 47500, days: 30, present: 27, tax: 200, pfOn: true, notes: "3CL", otSalary: 47500, sites: 11, otSite: 2.5, otLab: 1.5, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2026-07", month: "July 2026", date: "10-08-2026", gross: 47500, days: 31, present: 31, tax: 200, pfOn: true, notes: "", otSalary: 47500, sites: 9, otSite: 1.5, otLab: 17.0, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2026-08", month: "August 2026", date: "09-09-2026", gross: 47500, days: 31, present: 31, tax: 200, pfOn: true, notes: "", otSalary: 47500, sites: 11, otSite: 0, otLab: 26.5, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2026-09", month: "September 2026", date: "09-10-2026", gross: 47500, days: 30, present: 30, tax: 200, pfOn: true, notes: "", otSalary: 47500, sites: 5, otSite: 0, otLab: 16.5, siteAllow: 200, paidOt: 5354, otNotes: "half day shifted to next month" },
+      { id: "2026-10", month: "October 2026", date: "09-11-2026", gross: 47500, days: 31, present: 30, tax: 200, pfOn: true, notes: "", otSalary: 47500, sites: 8, otSite: 5.0, otLab: 11.0, siteAllow: 200, paidOt: null, otNotes: "" },
+      { id: "2026-11", month: "November 2026", date: "", gross: 47500, days: 30, present: 25, tax: 200, pfOn: true, notes: "", otSalary: 47500, sites: 3, otSite: 0.5, otLab: 8.5, siteAllow: 200, paidOt: null, otNotes: "" }
+    ];
+
+    const INCOME_FLOW_PRIOR = [
+      { date: "04-09-2021", amount: 2884, company: "Euro" },
+      { date: "06-10-2021", amount: 12500, company: "Euro" },
+      { date: "03-11-2021", amount: 12500, company: "Euro" },
+      { date: "04-12-2021", amount: 12500, company: "Euro" },
+      { date: "05-01-2022", amount: 12500, company: "Euro" },
+      { date: "05-02-2022", amount: 12500, company: "Euro" },
+      { date: "05-03-2022", amount: 12500, company: "Euro" },
+      { date: "31-03-2022", amount: 14500, company: "Euro" },
+      { date: "05-05-2022", amount: 13000, company: "Euro" },
+      { date: "04-06-2022", amount: 13000, company: "Euro" },
+      { date: "05-07-2022", amount: 11500, company: "Euro" },
+      { date: "05-08-2022", amount: 13000, company: "Euro" },
+      { date: "05-09-2022", amount: 13000, company: "Euro" },
+      { date: "04-10-2022", amount: 13000, company: "Euro" },
+      { date: "05-11-2022", amount: 13000, company: "Euro" },
+      { date: "05-12-2022", amount: 13000, company: "Euro" },
+      { date: "05-01-2023", amount: 12480, company: "Euro" },
+      { date: "04-02-2023", amount: 10637, company: "Euro" },
+      { date: "06-03-2023", amount: 13000, company: "Euro" },
+      { date: "05-04-2023", amount: 10556, company: "Euro" },
+      { date: "05-05-2023", amount: 16000, company: "Euro" },
+      { date: "05-06-2023", amount: 15313, company: "Euro" },
+      { date: "05-07-2023", amount: 16000, company: "Euro" },
+      { date: "05-08-2023", amount: 15313, company: "Euro" },
+      { date: "05-09-2023", amount: 12500, company: "Wavecal" },
+      { date: "04-10-2023", amount: 23000, company: "Wavecal" },
+      { date: "05-11-2023", amount: 23000, company: "Wavecal" },
+      { date: "07-12-2023", amount: 23000, company: "Wavecal" },
+      { date: "03-01-2024", amount: 23000, company: "Wavecal" },
+      { date: "05-02-2024", amount: 23000, company: "Wavecal" },
+      { date: "04-03-2024", amount: 23000, company: "Wavecal" },
+      { date: "04-04-2024", amount: 23000, company: "Wavecal" },
+      { date: "05-05-2024", amount: 23000, company: "Wavecal" }
+    ];
+
+    const AUDIT_FINDINGS = [
+      {
+        title: "Nov 2024 Base Salary Mismatch",
+        severity: "warning",
+        detail: "In 'Salary Details', November 2024 Net Salary is ₹37,500, but in 'OT Calc' it is still ₹35,000 (37,500 starts in Dec 2024). That slightly lowers Nov 2024 per-day/per-hour OT rates (though OT hours were 0 that month)."
+      },
+      {
+        title: "OT Paid vs Formula Variances (Jan, Mar, May 2025)",
+        severity: "info",
+        detail: "OT Calc Column K (manual/paid) differs slightly from Column J (formula): Jan 2025 (₹2,909 vs ₹2,907), Mar 2025 (₹7,034 vs ₹7,136), and May 2025 (₹2,850 vs ₹2,810)."
+      },
+      {
+        title: "Blank 'Column 1' (Col M) in Salary Details",
+        severity: "info",
+        detail: "The 'Income Flow' sheet uses ='Salary Details'!K + 'Salary Details'!M for VIPL payouts, but Column M is currently empty across all 31 rows."
+      },
+      {
+        title: "Nov 2026 Salary Date & Minor Header Typo",
+        severity: "info",
+        detail: "November 2026 is missing its Salary Date in Column B, and Column N is spelled 'Empolyee share' instead of 'Employee share'."
+      }
+    ];
+
+    // State
+    let viplRecords = [];
+    try {
+      const saved = localStorage.getItem('salary_ot_vipl_v1');
+      viplRecords = saved ? JSON.parse(saved) : structuredClone(INITIAL_VIPL);
+    } catch (e) {
+      viplRecords = structuredClone(INITIAL_VIPL);
+    }
+
+    const calcState = {
+      month: "November 2026",
+      date: "",
+      gross: 47500,
+      days: 30,
+      present: 25,
+      tax: 200,
+      pfOn: true,
+      notes: "",
+      sites: 3,
+      allowance: 200,
+      otSite: 0.5,
+      otLab: 8.5,
+      hoursDiv: 6,
+      otNotes: ""
+    };
+
+    let activeView = 'salary';
+    let histSubTab = 'vipl';
+    let viplChart = null;
+    let careerChart = null;
+
+    // Helpers
+    const fmt = (n) => '₹' + Math.round(n || 0).toLocaleString('en-IN');
+
+    function computeSalary(rec) {
+      const days = Math.max(1, Number(rec.days) || 30);
+      const present = Math.min(days, Math.max(0, Number(rec.present) || 0));
+      const gross = Math.max(0, Number(rec.gross) || 0);
+      const tax = Math.max(0, Number(rec.tax) || 0);
+      const leaveDays = Math.max(0, days - present);
+      const leaveDeduct = (gross / days) * leaveDays;
+      const basic = rec.pfOn ? (15000 / days) * present : 0;
+      const pfEmp = basic * 0.12;
+      const pfEmpr = basic * 0.0367;
+      const pfGovt = basic * 0.0833;
+      const pfTotal = pfEmp + pfEmpr + pfGovt;
+      const totalDeduct = leaveDeduct + tax + pfEmp;
+      const takeHome = gross - totalDeduct;
+      return { leaveDays, leaveDeduct, basic, pfEmp, pfEmpr, pfGovt, pfTotal, totalDeduct, takeHome };
+    }
+
+    function computeOT(rec) {
+      const days = Math.max(1, Number(rec.days) || 30);
+      const sal = Math.max(0, Number(rec.otSalary ?? rec.gross) || 0);
+      const div = Math.max(1, Number(rec.hoursDiv) || 6);
+      const perDay = sal / days;
+      const perHr = perDay / div;
+      const siteAllowPay = (Number(rec.sites) || 0) * (Number(rec.siteAllow ?? rec.allowance) || 0);
+      const otSitePay = (Number(rec.otSite) || 0) * perDay;
+      const otLabPay = (Number(rec.otLab) || 0) * perHr;
+      const total = siteAllowPay + otSitePay + otLabPay;
+      return { perDay, perHr, siteAllowPay, otSitePay, otLabPay, total };
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      clearTimeout(el._t);
+      el._t = setTimeout(() => el.classList.add('hidden'), 2400);
+    }
+
+    function saveStorage() {
+      try {
+        localStorage.setItem('salary_ot_vipl_v1', JSON.stringify(viplRecords));
+      } catch (e) {}
+    }
+
+    // Render Calculators
+    function renderCalculators() {
+      const s = computeSalary(calcState);
+      const o = computeOT({
+        days: calcState.days,
+        otSalary: calcState.gross,
+        sites: calcState.sites,
+        allowance: calcState.allowance,
+        otSite: calcState.otSite,
+        otLab: calcState.otLab,
+        hoursDiv: calcState.hoursDiv
+      });
+
+      // Salary Card
+      document.getElementById('sal-out-takehome').textContent = fmt(s.takeHome);
+      document.getElementById('sal-out-gross').textContent = fmt(calcState.gross);
+      document.getElementById('sal-out-deduct').textContent = '-' + fmt(s.totalDeduct);
+      document.getElementById('sal-out-with-ot').textContent = fmt(s.takeHome + o.total);
+
+      const pfBadge = document.getElementById('sal-pf-badge');
+      pfBadge.textContent = calcState.pfOn ? 'PF Active' : 'PF Off';
+      pfBadge.className = calcState.pfOn
+        ? 'px-2 py-0.5 rounded-full bg-white/20 font-semibold'
+        : 'px-2 py-0.5 rounded-full bg-rose-500/30 font-semibold';
+
+      const pct = calcState.days > 0 ? ((calcState.present / calcState.days) * 100).toFixed(1) : '0.0';
+      document.getElementById('sal-att-pct').textContent = pct + '%';
+      document.getElementById('sal-leave-days').textContent = s.leaveDays + (s.leaveDays === 1 ? ' day' : ' days');
+
+      document.getElementById('sal-brk-leave').textContent = fmt(s.leaveDeduct);
+      document.getElementById('sal-brk-tax').textContent = fmt(calcState.tax);
+      document.getElementById('sal-brk-basic').textContent = fmt(s.basic);
+      document.getElementById('sal-brk-pf-emp').textContent = fmt(s.pfEmp);
+      document.getElementById('sal-brk-pf-empr').textContent = fmt(s.pfEmpr);
+      document.getElementById('sal-brk-pf-govt').textContent = fmt(s.pfGovt);
+      document.getElementById('sal-brk-pf-tot').textContent = fmt(s.pfTotal);
+
+      // Auto Days display
+      document.getElementById('sal-days-display').textContent = calcState.days + ' days';
+
+      // Sync slider max
+      const slider = document.getElementById('sal-present-slider');
+      slider.max = calcState.days;
+      slider.value = calcState.present;
+
+      // OT Card
+      document.getElementById('ot-out-total').textContent = fmt(o.total);
+      document.getElementById('ot-out-perday').textContent = fmt(o.perDay);
+      document.getElementById('ot-out-perhr').textContent = fmt(o.perHr);
+      document.getElementById('ot-divisor-badge').textContent = calcState.hoursDiv + 'h/day';
+      document.getElementById('ot-sal-badge').textContent = 'Sal: ' + fmt(calcState.gross) + ' (' + calcState.days + 'd)';
+
+      document.getElementById('ot-lbl-sites').textContent = calcState.sites;
+      document.getElementById('ot-lbl-allow').textContent = calcState.allowance;
+      document.getElementById('ot-lbl-otsite').textContent = calcState.otSite;
+      document.getElementById('ot-lbl-otlab').textContent = calcState.otLab;
+
+      document.getElementById('ot-brk-siteallow').textContent = fmt(o.siteAllowPay);
+      document.getElementById('ot-brk-otsite').textContent = fmt(o.otSitePay);
+      document.getElementById('ot-brk-otlab').textContent = fmt(o.otLabPay);
+      document.getElementById('ot-brk-total').textContent = fmt(o.total);
+    }
+
+    function syncInputsFromState() {
+      const salParts = (calcState.month || '').trim().split(/\s+/);
+      if (salParts.length >= 2) {
+        const smSel = document.getElementById('sal-month-sel');
+        const sySel = document.getElementById('sal-year-sel');
+        if ([...smSel.options].some(o => o.value === salParts[0])) smSel.value = salParts[0];
+        if ([...sySel.options].some(o => o.value === salParts[1])) sySel.value = salParts[1];
+      }
+      document.getElementById('sal-date').value = calcState.date;
+      document.getElementById('sal-gross').value = calcState.gross;
+      document.getElementById('sal-present').value = calcState.present;
+      document.getElementById('sal-tax').value = calcState.tax;
+      document.getElementById('sal-pf-toggle').checked = calcState.pfOn;
+      document.getElementById('sal-notes').value = calcState.notes;
+      document.getElementById('ot-site-count').value = calcState.sites;
+      document.getElementById('ot-allowance').value = calcState.allowance;
+      document.getElementById('ot-site-days').value = calcState.otSite;
+      document.getElementById('ot-lab-hours').value = calcState.otLab;
+      document.getElementById('ot-hours-div').value = calcState.hoursDiv;
+      document.getElementById('ot-notes').value = calcState.otNotes || '';
+      const parts = (calcState.month || '').trim().split(/\s+/);
+      if (parts.length >= 2) {
+        const mSel = document.getElementById('ot-month-sel');
+        const ySel = document.getElementById('ot-year-sel');
+        if ([...mSel.options].some(o => o.value === parts[0])) mSel.value = parts[0];
+        if ([...ySel.options].some(o => o.value === parts[1])) ySel.value = parts[1];
+      }
+      renderCalculators();
+    }
+
+    // Render History
+    function renderHistory() {
+      const container = document.getElementById('hist-list');
+      const controls = document.getElementById('hist-controls');
+      const q = document.getElementById('hist-search').value.trim().toLowerCase();
+      const yr = document.getElementById('hist-year').value;
+
+      if (histSubTab === 'audit') {
+        controls.classList.add('hidden');
+        container.innerHTML = AUDIT_FINDINGS.map(item => `
+          <div class="bg-white rounded-2xl border ${item.severity === 'warning' ? 'border-amber-300 bg-amber-50/40' : 'border-slate-200'} p-4 shadow-sm space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full ${item.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-500'}"></span>
+              <h3 class="text-xs font-bold text-slate-900">${item.title}</h3>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">${item.detail}</p>
+          </div>
+        `).join('');
+        return;
+      }
+
+      controls.classList.remove('hidden');
+
+      if (histSubTab === 'vipl') {
+        const filtered = [...viplRecords].reverse().filter(r => {
+          const matchQ = !q || r.month.toLowerCase().includes(q) || (r.notes || '').toLowerCase().includes(q);
+          const matchY = yr === 'all' || r.month.includes(yr);
+          return matchQ && matchY;
+        });
+
+        if (!filtered.length) {
+          container.innerHTML = `<div class="text-center py-8 text-xs text-slate-500">No matching months found.</div>`;
+          return;
+        }
+
+        container.innerHTML = filtered.map(r => {
+          const s = computeSalary(r);
+          const o = computeOT(r);
+          return `
+            <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm">
+              <div class="flex items-start justify-between">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold text-slate-900">${r.month}</span>
+                    ${r.notes ? `<span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold">${r.notes}</span>` : ''}
+                  </div>
+                  <div class="text-[11px] text-slate-500 mt-0.5">
+                    Present ${r.present}/${r.days}d &bull; Gross ${fmt(r.gross)}
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-sm font-extrabold text-slate-900">${fmt(s.takeHome)}</div>
+                  <div class="text-[11px] font-semibold text-emerald-600">+OT ${fmt(o.total)}</div>
+                </div>
+              </div>
+              <div class="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span>PF: ${fmt(s.pfTotal)} &bull; Deduct: ${fmt(s.totalDeduct)}</span>
+                <button type="button" data-load-id="${r.id}" class="btn-load-month font-bold text-blue-600 hover:underline">Load in Calc &rarr;</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+        return;
+      }
+
+      // Income Flow (all 64 entries)
+      const viplFlow = viplRecords.map(r => ({
+        date: r.date || 'Pending',
+        amount: Math.round(computeSalary(r).takeHome),
+        company: 'VIPL (' + r.month + ')'
+      }));
+      const allFlow = [...INCOME_FLOW_PRIOR, ...viplFlow].reverse().filter(item => {
+        const matchQ = !q || item.company.toLowerCase().includes(q) || item.date.toLowerCase().includes(q);
+        const matchY = yr === 'all' || item.date.includes(yr) || item.company.includes(yr);
+        return matchQ && matchY;
+      });
+
+      container.innerHTML = allFlow.map(item => `
+        <div class="bg-white rounded-xl border border-slate-200 px-3.5 py-2.5 flex items-center justify-between shadow-sm">
+          <div>
+            <div class="text-xs font-bold text-slate-800">${item.company}</div>
+            <div class="text-[11px] text-slate-400">${item.date}</div>
+          </div>
+          <div class="text-sm font-extrabold text-slate-900">${fmt(item.amount)}</div>
+        </div>
+      `).join('');
+    }
+
+    // Render Insights & Charts
+    function renderInsights() {
+      let viplSal = 0, totalOt = 0, totalPf = 0;
+      const labels = [], salSeries = [], otSeries = [];
+
+      viplRecords.forEach(r => {
+        const s = computeSalary(r);
+        const o = computeOT(r);
+        viplSal += s.takeHome;
+        totalOt += o.total;
+        totalPf += s.pfTotal;
+        labels.push(r.month.slice(0, 3) + " '" + r.month.slice(-2));
+        salSeries.push(Math.round(s.takeHome));
+        otSeries.push(Math.round(o.total));
+      });
+
+      const priorTotal = INCOME_FLOW_PRIOR.reduce((acc, x) => acc + x.amount, 0);
+      document.getElementById('ins-vipl-sal').textContent = fmt(viplSal);
+      document.getElementById('ins-total-ot').textContent = fmt(totalOt);
+      document.getElementById('ins-ot-avg').textContent = 'Avg ' + fmt(totalOt / Math.max(1, viplRecords.length)) + ' / mo';
+      document.getElementById('ins-total-pf').textContent = fmt(totalPf);
+      document.getElementById('ins-career-total').textContent = fmt(priorTotal + viplSal);
+
+      if (typeof Chart === 'undefined') return;
+
+      if (viplChart) viplChart.destroy();
+      viplChart = new Chart(document.getElementById('chart-vipl'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Take-Home', data: salSeries, backgroundColor: '#2563eb', borderRadius: 4 },
+            { label: 'OT Pay', data: otSeries, backgroundColor: '#10b981', borderRadius: 4 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { x: { stacked: true, ticks: { font: { size: 9 } } }, y: { stacked: true, ticks: { font: { size: 10 } } } },
+          plugins: { legend: { labels: { boxWidth: 10, font: { size: 11 } } } }
+        }
+      });
+
+      const euroSum = INCOME_FLOW_PRIOR.filter(x => x.company === 'Euro').reduce((a, b) => a + b.amount, 0);
+      const waveSum = INCOME_FLOW_PRIOR.filter(x => x.company === 'Wavecal').reduce((a, b) => a + b.amount, 0);
+
+      if (careerChart) careerChart.destroy();
+      careerChart = new Chart(document.getElementById('chart-career'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Euro (2021–23)', 'Wavecal (2023–24)', 'VIPL (2024–26)'],
+          datasets: [{
+            data: [euroSum, waveSum, Math.round(viplSal)],
+            backgroundColor: ['#94a3b8', '#6366f1', '#2563eb'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+        }
+      });
+    }
+
+    // Render OT History
+    function renderOTHistory() {
+      const container = document.getElementById('oth-list');
+      const q = document.getElementById('oth-search').value.trim().toLowerCase();
+      const yr = document.getElementById('oth-year').value;
+
+      const filtered = [...viplRecords].reverse().filter(r => {
+        const matchQ = !q || r.month.toLowerCase().includes(q) || (r.otNotes || '').toLowerCase().includes(q);
+        const matchY = yr === 'all' || r.month.includes(yr);
+        return matchQ && matchY;
+      });
+
+      let sumTotal = 0, sumSites = 0, sumOtSite = 0, sumOtLab = 0;
+      filtered.forEach(r => {
+        const o = computeOT(r);
+        sumTotal += o.total;
+        sumSites += Number(r.sites) || 0;
+        sumOtSite += Number(r.otSite) || 0;
+        sumOtLab += Number(r.otLab) || 0;
+      });
+
+      document.getElementById('oth-sum-total').textContent = fmt(sumTotal);
+      document.getElementById('oth-sum-sites').textContent = sumSites;
+      document.getElementById('oth-sum-otsite').textContent = sumOtSite.toFixed(1) + ' d';
+      document.getElementById('oth-sum-otlab').textContent = sumOtLab.toFixed(1) + ' h';
+
+      if (!filtered.length) {
+        container.innerHTML = `<div class="text-center py-8 text-xs text-slate-500">No matching OT records found.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(r => {
+        const o = computeOT(r);
+        const hasPaidDiff = r.paidOt !== null && Math.round(o.total) !== Math.round(r.paidOt);
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm">
+            <div class="flex items-start justify-between">
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-sm font-bold text-slate-900">${r.month}</span>
+                  ${r.otNotes ? `<span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 text-[10px] font-bold">${r.otNotes}</span>` : ''}
+                </div>
+                <div class="text-[11px] text-slate-500 mt-0.5">
+                  Base ${fmt(r.otSalary ?? r.gross)} &bull; ${fmt(o.perDay)}/d &bull; ${fmt(o.perHr)}/h
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-extrabold text-emerald-600">${fmt(o.total)}</div>
+                ${r.paidOt !== null ? `<div class="text-[10px] font-semibold ${hasPaidDiff ? 'text-amber-600' : 'text-slate-400'}">Paid: ${fmt(r.paidOt)}</div>` : ''}
+              </div>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-slate-100 grid grid-cols-3 gap-2 text-[11px] text-slate-600">
+              <div>Sites: <strong class="text-slate-900">${r.sites}</strong> (${fmt(o.siteAllowPay)})</div>
+              <div>Site OT: <strong class="text-slate-900">${r.otSite}d</strong></div>
+              <div>Lab OT: <strong class="text-slate-900">${r.otLab}h</strong></div>
+            </div>
+            <div class="mt-2 pt-2 border-t border-slate-100 flex justify-end">
+              <button type="button" data-load-ot-id="${r.id}" class="btn-load-ot text-[11px] font-bold text-teal-600 hover:underline">Load in OT Calc &rarr;</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Navigation
+    function switchView(view) {
+      activeView = view;
+      ['salary', 'ot', 'ot-history', 'history', 'insights'].forEach(v => {
+        document.getElementById('view-' + v).classList.toggle('hidden', v !== view);
+      });
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        const isMe = btn.dataset.view === view;
+        btn.classList.toggle('tab-active', isMe);
+        btn.classList.toggle('text-slate-500', !isMe);
+      });
+      if (view === 'ot-history') renderOTHistory();
+      if (view === 'history') renderHistory();
+      if (view === 'insights') renderInsights();
+    }
+
+    // Event Listeners
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchView(btn.dataset.view));
+    });
+
+    document.getElementById('btn-audit-badge').addEventListener('click', () => {
+      histSubTab = 'audit';
+      document.querySelectorAll('.hist-tab').forEach(b => {
+        const active = b.dataset.hist === 'audit';
+        b.className = active
+          ? 'hist-tab flex-1 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-sm'
+          : 'hist-tab flex-1 py-1.5 rounded-lg text-xs font-bold text-slate-600';
+      });
+      switchView('history');
+    });
+
+    document.querySelectorAll('.hist-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        histSubTab = btn.dataset.hist;
+        document.querySelectorAll('.hist-tab').forEach(b => {
+          const active = b.dataset.hist === histSubTab;
+          b.className = active
+            ? 'hist-tab flex-1 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-sm'
+            : 'hist-tab flex-1 py-1.5 rounded-lg text-xs font-bold text-slate-600';
+        });
+        renderHistory();
+      });
+    });
+
+    document.getElementById('oth-search').addEventListener('input', renderOTHistory);
+    document.getElementById('oth-year').addEventListener('change', renderOTHistory);
+    document.getElementById('oth-list').addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-load-ot');
+      if (!btn) return;
+      const rec = viplRecords.find(r => r.id === btn.dataset.loadOtId);
+      if (!rec) return;
+      calcState.month = rec.month;
+      calcState.gross = rec.otSalary ?? rec.gross;
+      calcState.days = rec.days;
+      calcState.present = rec.present;
+      calcState.sites = rec.sites;
+      calcState.allowance = rec.siteAllow;
+      calcState.otSite = rec.otSite;
+      calcState.otLab = rec.otLab;
+      calcState.otNotes = rec.otNotes || '';
+      syncInputsFromState();
+      switchView('ot');
+      showToast('Loaded OT for ' + rec.month);
+    });
+
+    document.getElementById('hist-search').addEventListener('input', renderHistory);
+    document.getElementById('hist-year').addEventListener('change', renderHistory);
+
+    document.getElementById('hist-list').addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-load-month');
+      if (!btn) return;
+      const rec = viplRecords.find(r => r.id === btn.dataset.loadId);
+      if (!rec) return;
+      calcState.month = rec.month;
+      calcState.gross = rec.gross;
+      calcState.days = rec.days;
+      calcState.present = rec.present;
+      calcState.tax = rec.tax;
+      calcState.pfOn = rec.pfOn;
+      calcState.notes = rec.notes || '';
+      calcState.sites = rec.sites;
+      calcState.allowance = rec.siteAllow;
+      calcState.otSite = rec.otSite;
+      calcState.otLab = rec.otLab;
+      syncInputsFromState();
+      switchView('salary');
+      showToast('Loaded ' + rec.month);
+    });
+
+    // Salary Input Bindings
+    function onSalaryMonthYearChange() {
+      const m = document.getElementById('sal-month-sel').value;
+      const y = document.getElementById('sal-year-sel').value;
+      const label = m + ' ' + y;
+      calcState.month = label;
+      const mIdx = ['January','February','March','April','May','June','July','August','September','October','November','December'].indexOf(m);
+      calcState.days = new Date(Number(y), mIdx + 1, 0).getDate();
+      const rec = viplRecords.find(r => r.month.toLowerCase() === label.toLowerCase());
+      if (rec) {
+        calcState.gross = rec.gross;
+        calcState.present = rec.present;
+        calcState.tax = rec.tax;
+        calcState.pfOn = rec.pfOn;
+        calcState.notes = rec.notes || '';
+        calcState.sites = rec.sites;
+        calcState.allowance = rec.siteAllow;
+        calcState.otSite = rec.otSite;
+        calcState.otLab = rec.otLab;
+        calcState.otNotes = rec.otNotes || '';
+      } else if (calcState.present > calcState.days) {
+        calcState.present = calcState.days;
+      }
+      syncInputsFromState();
+      showToast(label + ': ' + calcState.days + ' days');
+    }
+
+    document.getElementById('sal-month-sel').addEventListener('change', onSalaryMonthYearChange);
+    document.getElementById('sal-year-sel').addEventListener('change', onSalaryMonthYearChange);
+    document.getElementById('sal-date').addEventListener('input', e => { calcState.date = e.target.value; });
+    document.getElementById('sal-gross').addEventListener('input', e => { calcState.gross = Number(e.target.value) || 0; renderCalculators(); });
+    document.getElementById('sal-tax').addEventListener('input', e => { calcState.tax = Number(e.target.value) || 0; renderCalculators(); });
+    document.getElementById('sal-notes').addEventListener('input', e => { calcState.notes = e.target.value; });
+    document.getElementById('sal-pf-toggle').addEventListener('change', e => { calcState.pfOn = e.target.checked; renderCalculators(); });
+
+    document.getElementById('sal-present').addEventListener('input', e => {
+      calcState.present = Math.min(calcState.days, Math.max(0, Number(e.target.value) || 0));
+      renderCalculators();
+    });
+    document.getElementById('sal-present-slider').addEventListener('input', e => {
+      calcState.present = Number(e.target.value) || 0;
+      document.getElementById('sal-present').value = calcState.present;
+      renderCalculators();
+    });
+
+    document.getElementById('btn-reset-sal').addEventListener('click', () => {
+      Object.assign(calcState, {
+        month: "November 2026", date: "", gross: 47500, days: 30, present: 25,
+        tax: 200, pfOn: true, notes: "", sites: 3, allowance: 200, otSite: 0.5, otLab: 8.5, hoursDiv: 6
+      });
+      syncInputsFromState();
+      showToast('Reset to Nov 2026 defaults');
+    });
+
+    // OT Input Bindings
+    document.getElementById('ot-site-count').addEventListener('input', e => { calcState.sites = Math.max(0, Number(e.target.value) || 0); renderCalculators(); });
+    document.getElementById('ot-allowance').addEventListener('input', e => { calcState.allowance = Math.max(0, Number(e.target.value) || 0); renderCalculators(); });
+    document.getElementById('ot-site-days').addEventListener('input', e => { calcState.otSite = Math.max(0, Number(e.target.value) || 0); renderCalculators(); });
+    document.getElementById('ot-lab-hours').addEventListener('input', e => { calcState.otLab = Math.max(0, Number(e.target.value) || 0); renderCalculators(); });
+    document.getElementById('ot-hours-div').addEventListener('input', e => { calcState.hoursDiv = Math.max(1, Number(e.target.value) || 6); renderCalculators(); });
+
+    document.getElementById('btn-site-minus').addEventListener('click', () => { calcState.sites = Math.max(0, calcState.sites - 1); syncInputsFromState(); });
+    document.getElementById('btn-site-plus').addEventListener('click', () => { calcState.sites += 1; syncInputsFromState(); });
+    document.getElementById('btn-otsite-minus').addEventListener('click', () => { calcState.otSite = Math.max(0, calcState.otSite - 0.5); syncInputsFromState(); });
+    document.getElementById('btn-otsite-plus').addEventListener('click', () => { calcState.otSite += 0.5; syncInputsFromState(); });
+    document.getElementById('btn-otlab-minus').addEventListener('click', () => { calcState.otLab = Math.max(0, calcState.otLab - 0.5); syncInputsFromState(); });
+    document.getElementById('btn-otlab-plus').addEventListener('click', () => { calcState.otLab += 0.5; syncInputsFromState(); });
+    function onOTMonthYearChange() {
+      const m = document.getElementById('ot-month-sel').value;
+      const y = document.getElementById('ot-year-sel').value;
+      const label = m + ' ' + y;
+      calcState.month = label;
+      const rec = viplRecords.find(r => r.month.toLowerCase() === label.toLowerCase());
+      if (rec) {
+        calcState.gross = rec.gross;
+        calcState.days = rec.days;
+        calcState.present = rec.present;
+        calcState.tax = rec.tax;
+        calcState.pfOn = rec.pfOn;
+        calcState.notes = rec.notes || '';
+        calcState.sites = rec.sites;
+        calcState.allowance = rec.siteAllow;
+        calcState.otSite = rec.otSite;
+        calcState.otLab = rec.otLab;
+        calcState.otNotes = rec.otNotes || '';
+        syncInputsFromState();
+        showToast('Loaded ' + label + ' (' + fmt(rec.gross) + ')');
+      } else {
+        const mIdx = ['January','February','March','April','May','June','July','August','September','October','November','December'].indexOf(m);
+        calcState.days = new Date(Number(y), mIdx + 1, 0).getDate();
+        if (calcState.present > calcState.days) calcState.present = calcState.days;
+        syncInputsFromState();
+        showToast(label + ': using ' + fmt(calcState.gross) + ' (' + calcState.days + 'd)');
+      }
+    }
+
+    document.getElementById('ot-month-sel').addEventListener('change', onOTMonthYearChange);
+    document.getElementById('ot-year-sel').addEventListener('change', onOTMonthYearChange);
+    document.getElementById('btn-sync-sal').addEventListener('click', () => { renderCalculators(); showToast('Synced with Salary (' + fmt(calcState.gross) + ')'); });
+    document.getElementById('ot-notes').addEventListener('input', e => { calcState.otNotes = e.target.value; });
+
+    document.getElementById('btn-save-ot').addEventListener('click', () => {
+      const m = document.getElementById('ot-month-sel').value;
+      const y = document.getElementById('ot-year-sel').value;
+      const mName = m + ' ' + y;
+      calcState.month = mName;
+      const idx = viplRecords.findIndex(r => r.month.toLowerCase() === mName.toLowerCase());
+      if (idx >= 0) {
+        viplRecords[idx] = {
+          ...viplRecords[idx],
+          otSalary: calcState.gross,
+          sites: calcState.sites,
+          siteAllow: calcState.allowance,
+          otSite: calcState.otSite,
+          otLab: calcState.otLab,
+          otNotes: calcState.otNotes
+        };
+      } else {
+        viplRecords.push({
+          id: 'custom-' + Date.now(),
+          month: mName,
+          date: '',
+          gross: calcState.gross,
+          days: calcState.days,
+          present: Math.min(calcState.present, calcState.days),
+          tax: calcState.tax,
+          pfOn: calcState.pfOn,
+          notes: calcState.notes,
+          otSalary: calcState.gross,
+          sites: calcState.sites,
+          otSite: calcState.otSite,
+          otLab: calcState.otLab,
+          siteAllow: calcState.allowance,
+          paidOt: null,
+          otNotes: calcState.otNotes
+        });
+      }
+      saveStorage();
+      syncInputsFromState();
+      showToast((idx >= 0 ? 'Updated OT for ' : 'Saved OT for ') + mName);
+    });
+
+    // Save / Update Month
+    document.getElementById('btn-save-month').addEventListener('click', () => {
+      const mName = (calcState.month || 'Custom Month').trim();
+      const idx = viplRecords.findIndex(r => r.month.toLowerCase() === mName.toLowerCase());
+      const newRec = {
+        id: idx >= 0 ? viplRecords[idx].id : 'custom-' + Date.now(),
+        month: mName,
+        date: calcState.date || (idx >= 0 ? viplRecords[idx].date : ''),
+        gross: calcState.gross,
+        days: calcState.days,
+        present: calcState.present,
+        tax: calcState.tax,
+        pfOn: calcState.pfOn,
+        notes: calcState.notes,
+        otSalary: calcState.gross,
+        sites: calcState.sites,
+        otSite: calcState.otSite,
+        otLab: calcState.otLab,
+        siteAllow: calcState.allowance,
+        paidOt: idx >= 0 ? viplRecords[idx].paidOt : null,
+        otNotes: calcState.otNotes || (idx >= 0 ? viplRecords[idx].otNotes : '')
+      };
+      if (idx >= 0) viplRecords[idx] = newRec;
+      else viplRecords.push(newRec);
+      saveStorage();
+      showToast((idx >= 0 ? 'Updated ' : 'Saved ') + mName);
+    });
+
+    // Export CSV
+    document.getElementById('btn-export-csv').addEventListener('click', () => {
+      const headers = ['Month', 'Date', 'Gross', 'Days', 'Present', 'Leave', 'LeaveDeduction', 'Tax', 'Basic', 'EmployeePF', 'TakeHome', 'Sites', 'OTSite', 'OTLab', 'OTTotal', 'Notes'];
+      const rows = viplRecords.map(r => {
+        const s = computeSalary(r);
+        const o = computeOT(r);
+        return [
+          `"${r.month}"`, `"${r.date}"`, r.gross, r.days, r.present, s.leaveDays,
+          Math.round(s.leaveDeduct), r.tax, Math.round(s.basic), Math.round(s.pfEmp),
+          Math.round(s.takeHome), r.sites, r.otSite, r.otLab, Math.round(o.total), `"${r.notes || ''}"`
+        ].join(',');
+      });
+      const csv = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'salary_ot_export.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Exported CSV');
+    });
+
+    // Init
+    syncInputsFromState();
+  </script>
+</body>
+</html>
